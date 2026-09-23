@@ -4,6 +4,11 @@ plugins {
 }
 
 android {
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
     namespace = "com.nexus.xs.launcher"
     compileSdk = 35
 
@@ -14,4 +19,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+}
+
+
+kotlin {
+    jvmToolchain(17)
 }

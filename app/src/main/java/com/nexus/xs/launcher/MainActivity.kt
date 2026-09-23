@@ -8,6 +8,9 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.*
+import android.text.Editable
+import android.text.TextWatcher
+import android.content.pm.ResolveInfo
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -17,8 +20,8 @@ class MainActivity : Activity() {
     private lateinit var grid: GridLayout
     private lateinit var search: EditText
 
-    private val apps by lazy {
-        packageManager.queryIntentActivities(
+    private val apps: List<ResolveInfo>
+        get() = packageManager.queryIntentActivities(
             Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             },
@@ -26,30 +29,27 @@ class MainActivity : Activity() {
         ).sortedBy {
             it.loadLabel(packageManager).toString().lowercase()
         }
-    }
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
         buildLauncher()
     }
 
     private fun buildLauncher() {
+
         val dark = LauncherSettings.isDarkMode(this)
 
-        val background =
-            if (dark) Color.rgb(12, 12, 14)
-            else Color.rgb(242, 242, 247)
+        val background = if (dark) {
+            Color.rgb(12, 12, 14)
+        } else {
+            Color.rgb(242, 242, 247)
+        }
 
-        val textColor =
-            if (dark) Color.WHITE else Color.BLACK
+        val textColor = if (dark) Color.WHITE else Color.BLACK
 
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(16, 26, 16, 12)
+            setPadding(16, 28, 16, 12)
             setBackgroundColor(background)
         }
 
@@ -72,7 +72,7 @@ class MainActivity : Activity() {
             clock,
             LinearLayout.LayoutParams(
                 0,
-                50,
+                55,
                 1f
             )
         )
@@ -96,36 +96,46 @@ class MainActivity : Activity() {
 
         top.addView(
             settings,
-            LinearLayout.LayoutParams(55, 50)
+            LinearLayout.LayoutParams(55, 55)
         )
 
         root.addView(top)
 
         search = EditText(this).apply {
+
             hint = "Search"
             textSize = 16f
-            singleLine = true
+
+            setSingleLine(true)
             setPadding(20, 0, 20, 0)
 
-            background = GradientDrawable().apply {
-                setColor(
-                    if (dark)
-                        Color.rgb(40, 40, 43)
-                    else
-                        Color.WHITE
-                )
-                cornerRadius = 50f
-            }
-
             setTextColor(textColor)
+
             setHintTextColor(
                 if (dark) Color.LTGRAY else Color.GRAY
+            )
+
+            setBackground(
+                GradientDrawable().apply {
+                    setColor(
+                        if (dark) {
+                            Color.rgb(40, 40, 43)
+                        } else {
+                            Color.WHITE
+                        }
+                    )
+
+                    cornerRadius = 50f
+                }
             )
         }
 
         root.addView(
             search,
-            LinearLayout.LayoutParams(-1, 52).apply {
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                55
+            ).apply {
                 topMargin = 10
             }
         )
@@ -134,18 +144,21 @@ class MainActivity : Activity() {
 
         grid = GridLayout(this).apply {
             columnCount = 4
-            setPadding(4, 14, 4, 14)
+            setPadding(4, 16, 4, 16)
         }
 
         scroll.addView(
             grid,
-            ViewGroup.LayoutParams(-1, -2)
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         )
 
         root.addView(
             scroll,
             LinearLayout.LayoutParams(
-                -1,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
@@ -153,10 +166,8 @@ class MainActivity : Activity() {
 
         createDock(dark)
 
-        refreshApps()
-
         search.addTextChangedListener(
-            object : android.text.TextWatcher {
+            object : TextWatcher {
 
                 override fun beforeTextChanged(
                     s: CharSequence?,
@@ -175,15 +186,18 @@ class MainActivity : Activity() {
                 }
 
                 override fun afterTextChanged(
-                    s: android.text.Editable?
+                    s: Editable?
                 ) {}
             }
         )
 
         setContentView(root)
+
+        refreshApps()
     }
 
     private fun refreshApps() {
+
         grid.removeAllViews()
 
         val query = search.text.toString()
@@ -198,59 +212,86 @@ class MainActivity : Activity() {
     }
 
     private fun createApp(
-        info: android.content.pm.ResolveInfo
+        info: ResolveInfo
     ): LinearLayout {
 
         val dark = LauncherSettings.isDarkMode(this)
 
         val item = LinearLayout(this).apply {
+
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
+
             setPadding(4, 8, 4, 10)
 
             setOnClickListener {
-                packageManager.getLaunchIntentForPackage(
-                    info.activityInfo.packageName
-                )?.let(::startActivity)
+
+                packageManager
+                    .getLaunchIntentForPackage(
+                        info.activityInfo.packageName
+                    )
+                    ?.let {
+                        startActivity(it)
+                    }
             }
         }
 
         val icon = ImageView(this).apply {
-            setImageDrawable(info.loadIcon(packageManager))
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
+
+            setImageDrawable(
+                info.loadIcon(packageManager)
+            )
+
+            scaleType =
+                ImageView.ScaleType.CENTER_INSIDE
         }
 
         item.addView(
             icon,
-            LinearLayout.LayoutParams(64, 64)
+            LinearLayout.LayoutParams(
+                64,
+                64
+            )
         )
 
         val name = TextView(this).apply {
+
             text = info.loadLabel(packageManager)
+
             textSize = 12f
             gravity = Gravity.CENTER
+
             setTextColor(
                 if (dark) Color.WHITE else Color.BLACK
             )
+
             maxLines = 1
+
             ellipsize =
                 android.text.TextUtils.TruncateAt.END
         }
 
         item.addView(
             name,
-            LinearLayout.LayoutParams(-1, 28)
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                28
+            )
         )
 
         item.layoutParams =
             GridLayout.LayoutParams().apply {
+
                 width = 0
+
                 height =
                     GridLayout.LayoutParams.WRAP_CONTENT
-                columnSpec = GridLayout.spec(
-                    GridLayout.UNDEFINED,
-                    1f
-                )
+
+                columnSpec =
+                    GridLayout.spec(
+                        GridLayout.UNDEFINED,
+                        1f
+                    )
             }
 
         return item
@@ -259,38 +300,59 @@ class MainActivity : Activity() {
     private fun createDock(dark: Boolean) {
 
         val dock = LinearLayout(this).apply {
+
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
+
             setPadding(8, 8, 8, 8)
 
-            background = GradientDrawable().apply {
-                setColor(
-                    if (dark)
-                        Color.argb(220, 45, 45, 48)
-                    else
-                        Color.argb(220, 255, 255, 255)
-                )
-                cornerRadius = 48f
-            }
+            background =
+                GradientDrawable().apply {
+
+                    setColor(
+                        if (dark) {
+                            Color.argb(
+                                220,
+                                45,
+                                45,
+                                48
+                            )
+                        } else {
+                            Color.argb(
+                                220,
+                                255,
+                                255,
+                                255
+                            )
+                        }
+                    )
+
+                    cornerRadius = 48f
+                }
         }
 
-        apps.takeLast(4).forEach { info ->
+        apps.take(4).forEach { info ->
 
             val button = ImageButton(this).apply {
+
                 setImageDrawable(
                     info.loadIcon(packageManager)
                 )
 
                 background = null
+
                 scaleType =
                     ImageView.ScaleType.CENTER_INSIDE
 
                 setOnClickListener {
+
                     packageManager
                         .getLaunchIntentForPackage(
                             info.activityInfo.packageName
                         )
-                        ?.let(::startActivity)
+                        ?.let {
+                            startActivity(it)
+                        }
                 }
             }
 
@@ -308,7 +370,7 @@ class MainActivity : Activity() {
         root.addView(
             dock,
             LinearLayout.LayoutParams(
-                -1,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 78
             ).apply {
                 topMargin = 8
